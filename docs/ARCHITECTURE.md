@@ -1,0 +1,9 @@
+# Architecture and protocol
+
+`src/main.mjs` integrates commands, settings, OS-encrypted SecretStorage, microphone meter, native editor insertion and optional Cipherfold lifecycle. `core.mjs` validates endpoints/settings and exact request/response IDs, applies optional whole-line formatting and plans insertions. `session.mjs` is the cancellable recording/request/recovery state machine. Generation checks reject late permission/network completion. `transport.mjs` uses Fetch with redirects forbidden.
+
+Gateway HTTP contract: POST `/v1/transcribe`, JSON containing exactly `request_id`, `instance_id`, `audio_base64`, `mime`, `languages` (up to eight ISO code strings) and `keywords` (up to 50 strings). Bearer authentication binds the instance to a SHA-256 token digest. Success includes matching request/instance IDs and text; errors expose only bounded codes. GET `/healthz` returns service/provider-configuration status, not provider connectivity proof.
+
+`gateway/service.py` uses only the Python standard library and external ffprobe. A SQLite transaction reserves a request before provider dispatch. Duplicate identical requests return the RAM cache or a held/expired state; changed payloads conflict. Provider errors after dispatch are uncertain and never automatically retried. Concurrency, body/duration and daily global quotas are bounded. MIME and actual packet duration are checked before upstream use.
+
+Provider endpoint: `https://api.openai.com/v1/audio/transcriptions`, model `gpt-transcribe`, multipart `languages[]`, `keywords[]` and file. Protocol was checked against the [official model guide](https://developers.openai.com/api/docs/models/gpt-transcribe) and [transcription guide](https://developers.openai.com/api/docs/guides/transcription). Availability depends on the operator's API account. Tests inject a synthetic provider; no live credentials are included.

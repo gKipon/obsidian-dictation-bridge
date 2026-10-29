@@ -1,0 +1,11 @@
+# Privacy
+
+The client uploads only audio bytes, MIME type, explicit language hints/vocabulary, a random request UUID and configured instance UUID. Its bearer token is sent in an HTTP authorization header. HTTPS is required; URL userinfo/query/fragment are rejected; redirects, cookies and caching are disabled. Changing the endpoint requires explicitly saving a token again. There is no telemetry, default server or automatic retry.
+
+The current note body, title/path, editor and selection are held in RAM to detect stale insertion and are never part of the request. Audio buffers are cleared after completion/cancellation; JavaScript cannot guarantee erasure of all runtime copies. Microphone tracks are stopped. Once sent, cancellation cannot recall provider processing or charges. Never dictate information you do not want your gateway and OpenAI to process.
+
+Token and connection/options are persisted only through Obsidian OS-encrypted SecretStorage. Device/OS compromise and malicious installed plugins are outside this protection. If encrypted storage is unavailable, setup fails closed; no plaintext fallback exists.
+
+The gateway keeps audio and recognized text in process memory, not application logs or audio files. Transcripts are cached for up to 900 seconds (and at most 100 entries); restart or cache eviction can make results unavailable. A durable SQLite ledger stores instance/request IDs, SHA-256 payload hashes, status, UTC day and billed-duration reservation. It does not store audio, terms or transcript, but hashes and timing are still metadata. The ledger is retained indefinitely to prevent duplicate paid dispatch after restart; do not delete it to retry an unknown request. Operators manage protected backups and retention policy deliberately.
+
+Gateway ffprobe receives bytes through stdin. Deploy without core dumps or unencrypted swap if memory confidentiality matters. Review reverse proxy logging/body buffering and upstream provider retention: the application's memory-only policy does not control infrastructure or OpenAI retention. Provider authentication stays server-side in `OPENAI_API_KEY`. TLS certificates, hosting and API charges are the operator's responsibility.

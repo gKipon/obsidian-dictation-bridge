@@ -1,0 +1,9 @@
+{
+  "state_path": "/var/lib/dictation-bridge/state.sqlite",
+  "devices": [],
+  "port": 8897,
+  "max_audio_bytes": 5242880,
+  "daily_requests_limit": 120,
+  "daily_audio_seconds_limit": 3600,
+  "provider_timeout": 75
+}
