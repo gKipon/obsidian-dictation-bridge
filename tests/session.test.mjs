@@ -51,7 +51,33 @@ test('permission denial and unavailable recorder have bounded safe errors',async
 
 test('retry preserves immutable request ID, language, terms and connection',async()=>{
  const bodies=[];let settings={keywords:'Example'},conn={endpoint:'https://voice.example.invalid/v1/transcribe',token:'synthetic-token-not-a-secret-1234567',instanceId};
- const f=fixture({settings:()=>settings,getConnection:()=>conn,request:async arg=>{bodies.push(arg.body);return {status:502,json:{error:'PROVIDER_UNCERTAIN'}};}});
+ const f=fixture({settings:()=>settings,getConnection:()=>conn,request:async arg=>{bodies.push(arg.body);return {status:429,json:{error:'RATE_LIMIT'}};}});
  await f.session.start({});f.session.stop();await tick();await tick();settings={keywords:'other'};conn={...conn,instanceId:crypto.randomUUID()};
  await f.session.retry();assert.equal(bodies[0],bodies[1]);assert.equal(f.inserted.length,0);f.session.cancel();
+});
+
+test('invalid connection releases target and settings before requesting microphone',async()=>{
+ const f=fixture({getConnection:()=>{throw Object.assign(Error('private detail'),{code:'INVALID_ENDPOINT'});}});
+ await f.session.start({original:'synthetic note'});
+ assert.equal(f.session.state,'idle');assert.equal(f.session.target,null);assert.equal(f.session.requestSettings,null);
+ assert.equal(f.session.connection,null);assert.equal(f.sent.length,0);assert.deepEqual(f.errors,['INVALID_ENDPOINT']);
+});
+test('uncertain and terminal results cannot be retried through the state machine',async()=>{
+ for(const error of ['REQUEST_UNKNOWN','RESULT_EXPIRED','REQUEST_CONFLICT','PROVIDER_UNCERTAIN']){
+  let calls=0;const f=fixture({request:async()=>{calls++;return {status:409,json:{error}};}});
+  await f.session.start({});f.session.stop();await tick();await tick();
+  assert.equal(f.session.state,'error');assert.equal(f.session.canRetry(),false);
+  await f.session.retry();assert.equal(calls,1);f.session.cancel();
+ }
+});
+test('late Blob conversion cannot replace fresh-session audio after cancellation',async t=>{
+ const old=deferred(),original=Blob.prototype.arrayBuffer;let reads=0;
+ t.mock.method(Blob.prototype,'arrayBuffer',function(){return ++reads===1?old.promise:original.call(this);});
+ const f=fixture({request:async()=>({status:429,json:{error:'RATE_LIMIT'}})});
+ await f.session.start({});f.session.stop();f.session.cancel();
+ await f.session.start({});f.session.stop();await tick();await tick();
+ const current=f.session.bytes;assert(current);assert.equal(f.session.state,'error');
+ const stale=new Uint8Array([1,2,3]);old.resolve(stale.buffer);await tick();
+ assert.equal(f.session.bytes,current);assert.deepEqual([...stale],[0,0,0]);assert.equal(f.session.state,'error');
+ f.session.cancel();
 });

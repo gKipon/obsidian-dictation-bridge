@@ -1,7 +1,7 @@
 {
   "id": "dictation-bridge",
   "name": "Dictation Bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "1.14.5",
   "description": "Dictate into the current note through a transcription gateway you control.",
   "author": "Dictation Bridge contributors",

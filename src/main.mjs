@@ -1,4 +1,4 @@
-import {Plugin,PluginSettingTab,Setting,Modal,Notice,MarkdownView,Platform,setIcon} from 'obsidian';
+import {Plugin,PluginSettingTab,Setting,Modal,Notice,MarkdownView} from 'obsidian';
 import {DEFAULT_SETTINGS,normalizeSettings,planInsertion,UUID,validateEndpoint} from './core.mjs';
 import {requestGateway} from './transport.mjs';
 import {VoiceSession,MAX_SECONDS} from './session.mjs';
@@ -8,7 +8,7 @@ const errors={
  MIC_DENIED:'Allow microphone access for Obsidian in system settings.',NO_RECORDER:'Microphone recording is unavailable.',RECORDING_ERROR:'Recording failed. Check the microphone.',INVALID_AUDIO:'Recording is empty or too large.',TOO_LONG:'Recording exceeded the size limit and was cancelled.',
  INVALID_ENDPOINT:'Enter the full HTTPS transcription endpoint, without credentials, query or fragment.',INVALID_TOKEN:'Add a device token in settings.',INVALID_ID:'Check the instance UUID in settings.',INVALID_KEYWORDS:'Use up to 50 terms, one per line, up to 100 characters each; no < or >.',INVALID_SETTINGS:'Check transcription settings and language codes.',
  AUTH_ERROR:'Gateway access denied. Check the connection.',FORBIDDEN:'Gateway rejected this device token.',RATE_LIMIT:'Gateway rate limit reached.',DAILY_LIMIT:'Gateway daily request limit reached.',DAILY_AUDIO_LIMIT:'Gateway daily audio limit reached.',BUSY:'Gateway is already processing a recording. Retry later.',PROVIDER_UNAVAILABLE:'The gateway operator must configure the OpenAI API key.',
- SERVER_ERROR:'Gateway unavailable. Recording remains in memory.',HTTP_ERROR:'Gateway rejected the request. Recording remains in memory.',NETWORK_ERROR:'No response received. Recording remains in memory.',TIMEOUT:'Response timed out. Retry checks the same request without repeating the provider submission.',
+ SERVER_ERROR:'Gateway unavailable. Recording remains in memory.',HTTP_ERROR:'Gateway rejected the request. Recording remains in memory.',NETWORK_ERROR:'No response received. Recording remains in memory.',TIMEOUT:'Response timed out. Retry checks the same request without repeating the provider submission.',RESPONSE_LIMIT:'Gateway response exceeded the size limit. Recording remains in memory.',
  REQUEST_UNKNOWN:'The previous submission may have been billed. This request cannot be sent again.',RESULT_EXPIRED:'The gateway no longer has this result. Resubmission is blocked.',REQUEST_CONFLICT:'Request data changed. Cancel and begin a new recording.',PROVIDER_UNCERTAIN:'Provider outcome is unknown. Resubmission is blocked to prevent duplicate billing.',RESPONSE_MISMATCH:'Response belongs to another recording or device. Insertion blocked.',INVALID_TRANSCRIPT:'No usable transcript returned.',INVALID_MIME:'Recording format is unsupported.',INVALID_AUDIO_DURATION:'Unable to verify audio duration. Maximum: five minutes.',AUDIO_TOO_LONG:'Gateway rejected audio longer than five minutes.'
 };
 const message=code=>errors[code]||'Dictation did not complete. Check the connection and settings.';
@@ -29,11 +29,9 @@ export default class DictationBridge extends Plugin {
     this.label=this.panel.createSpan();this.meter=this.panel.createEl('meter');this.meter.min=0;this.meter.max=1;this.meter.setAttribute('aria-label','Microphone level');
     this.primary=this.panel.createEl('button');this.primary.addEventListener('click',()=>void this.primaryAction());
     this.cancelButton=this.panel.createEl('button',{text:'Cancel'});this.cancelButton.addEventListener('click',()=>this.cancel());
-    if(Platform.isMobile){this.mobileButton=document.body.createEl('button',{cls:'dictation-bridge-mobile',attr:{'aria-label':'Dictation Bridge: dictate'}});setIcon(this.mobileButton,'mic');this.mobileButton.addEventListener('click',()=>void this.toggle());}
     this.registerEvent(this.app.workspace.on('cipherfold:will-lock',()=>this.cancelPrivacy()));
     this.registerEvent(this.app.workspace.on('active-leaf-change',()=>this.render()));
     this.registerDomEvent(document,'visibilitychange',()=>{if(document.hidden)this.cancelPrivacy();});
-    if(globalThis.visualViewport){this.registerDomEvent(visualViewport,'resize',()=>this.positionMobile());this.registerDomEvent(visualViewport,'scroll',()=>this.positionMobile());}
     this.registerInterval(setInterval(()=>{
       if(this.session.state!=='idle'&&!this.validSession(this.session.target)){this.cancelPrivacy();return;}
       this.updateMeter();this.render();
@@ -106,18 +104,16 @@ export default class DictationBridge extends Plugin {
     this.analyser.getFloatTimeDomainData(this.wave);const rms=Math.sqrt(this.wave.reduce((sum,x)=>sum+x*x,0)/this.wave.length);this.peak=Math.max(this.peak,rms);this.meterSamples++;if(this.meter)this.meter.value=Math.min(1,rms*8);
   }
   closeMeter(){try{this.source?.disconnect();void this.audioContext?.close().catch(()=>{});}catch{}this.source=null;this.analyser=null;this.audioContext=null;this.wave=null;if(this.meter)this.meter.value=0;}
-  positionMobile(){if(this.mobileButton){const v=globalThis.visualViewport;const keyboard=v?Math.max(0,innerHeight-v.height-v.offsetTop):0;this.mobileButton.style.bottom=`${keyboard+80}px`;}}
   render(){
     if(!this.panel)return;
     const s=this.session,state=s.state,seconds=state==='recording'?Math.min(MAX_SECONDS,Math.floor((Date.now()-s.startedAt)/1000)):0;
     const labels={idle:'Dictation Bridge',requesting:'Requesting microphone…',recording:`Recording ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`,stopping:'Finishing recording…',transcribing:'Gateway → OpenAI → text…',error:'No response · audio in memory',recovery:'Transcript ready · choose insertion location'};
     this.label.textContent=labels[state];this.status?.setText(state==='idle'?'🎙 Dictation Bridge':labels[state]);
     this.panel.hidden=state==='idle';this.panel.dataset.state=state;this.meter.hidden=state!=='recording';
-    this.primary.textContent=state==='error'?'Retry':state==='recovery'?'Show transcript':'Done';this.primary.disabled=['stopping','transcribing'].includes(state)||(state==='error'&&['REQUEST_UNKNOWN','RESULT_EXPIRED','REQUEST_CONFLICT','PROVIDER_UNCERTAIN'].includes(s.lastError));
+    this.primary.textContent=state==='error'?'Retry':state==='recovery'?'Show transcript':'Done';this.primary.disabled=['stopping','transcribing'].includes(state)||(state==='error'&&!s.canRetry());
     this.cancelButton.textContent=state==='recovery'?'Discard result':'Cancel';
-    if(this.mobileButton){this.mobileButton.hidden=!this.app.workspace.getActiveViewOfType(MarkdownView)||!this.unlocked();setIcon(this.mobileButton,state==='recording'?'square':'mic');this.mobileButton.setAttribute('aria-label',state==='recording'?'Stop dictation':'Start dictation');this.positionMobile();}
   }
-  onunload(){this.disposed=true;this.cancel();this.panel?.remove();this.mobileButton?.remove();}
+  onunload(){this.disposed=true;this.cancel();this.panel?.remove();this.options=null;}
 }
 
 class RecoveryModal extends Modal {
@@ -138,7 +134,6 @@ class VoiceSettings extends PluginSettingTab {
  constructor(app,plugin){super(app,plugin);this.plugin=plugin;}
  display(){
   const p=this.plugin,c=this.containerEl;c.empty();c.addClass('dictation-bridge-settings');p.loadOptions();
-  c.createEl('h2',{text:'Dictation Bridge'});
   c.createEl('p',{text:'Audio and your explicit vocabulary are sent to your gateway, then to OpenAI. The note title, path and existing text are never uploaded. A gateway and a paid OpenAI API account are required. The API key stays on the gateway.'});
   c.createEl('p',{text:'Maximum recording: 4 minutes 55 seconds / 5 MiB. Audio and transcript stay in memory until completion or cancellation. Hiding Obsidian or locking Cipherfold cancels unfinished dictation. Cancellation cannot recall audio already sent.'});
   const draft={...p.options};let secretInput;

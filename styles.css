@@ -4,9 +4,6 @@
 .dictation-bridge-panel[data-state="recording"] { border-color:var(--text-error); }
 .dictation-bridge-panel meter { width:64px; }
 .dictation-bridge-panel span { font-size:var(--font-ui-small); }
-.dictation-bridge-mobile { position:fixed; right:16px; z-index:1001; width:46px; height:46px; border-radius:50%; background:var(--interactive-accent); color:var(--text-on-accent); padding:10px; box-shadow:0 2px 12px #0003; }
-.dictation-bridge-mobile[hidden] { display:none; }
 .dictation-bridge-modal textarea { width:100%; min-height:180px; resize:vertical; }
 .dictation-bridge-modal button { margin:12px 8px 0 0; }
 .dictation-bridge-settings textarea { min-height:110px; width:240px; }
-body.is-mobile .dictation-bridge-panel { left:12px; right:12px; bottom:calc(var(--safe-area-inset-bottom, 0px) + 18px); transform:none; flex-wrap:wrap; }

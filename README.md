@@ -2,7 +2,7 @@
 
 Record a short dictation in desktop Obsidian, send it to **your own HTTPS gateway**, and insert the transcript at the captured cursor or selection. Existing note content, title and path are not uploaded. If the note changes while waiting, the transcript stays in a recovery dialog for explicit insertion.
 
-**Early community release, 0.1.0.** Requires Obsidian 1.14.5 or later, OS-encrypted SecretStorage, microphone access, a self-hosted gateway and a paid OpenAI API account. No hosted service or API key is supplied. Desktop only; mobile is not claimed. Provider charges and data handling are governed by the operator's OpenAI account.
+**Community review candidate, 0.1.1. Not yet listed in the Community Plugins directory.** Requires Obsidian 1.14.5 or later, OS-encrypted SecretStorage, microphone access, a self-hosted gateway and a paid OpenAI API account. No hosted service or API key is supplied. Desktop only; mobile is not claimed. Provider charges and data handling are governed by the operator's OpenAI account.
 
 ## Install and connect
 

@@ -11,8 +11,10 @@ export class VoiceSession {
   live(g){return this.generation===g&&this.state!=='idle'&&this.isValid(this.target);}
   async start(target){
     if(this.state!=='idle')return;
-    this.target=target;this.requestId=crypto.randomUUID();this.requestSettings=structuredClone(this.settings());this.connection={...this.getConnection()};this.state='requesting';this.changed();const g=++this.generation;
+    const g=++this.generation;
     try{
+      this.requestSettings=structuredClone(this.settings());this.connection={...this.getConnection()};
+      this.target=target;this.requestId=crypto.randomUUID();this.state='requesting';this.changed();
       if(!this.mediaDevices?.getUserMedia||!this.Recorder)throw Object.assign(Error(),{code:'NO_RECORDER'});
       const stream=await this.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
       if(!this.live(g)){stream.getTracks().forEach(t=>t.stop());if(this.generation===g)this.cancel();return;}
@@ -45,8 +47,11 @@ export class VoiceSession {
     if(!this.live(g)){if(this.generation===g)this.cancel();return;}
     try{
       const blob=new Blob(this.chunks,{type:this.mime});this.chunks=[];
-      this.bytes=new Uint8Array(await blob.arrayBuffer());
-      if(!this.live(g)){if(this.generation===g)this.cancel();return;}
+      const bytes=new Uint8Array(await blob.arrayBuffer());
+      // Cancellation may have started a new session while Blob was being read.
+      // Never assign stale audio to that session, even if its request is pending.
+      if(!this.live(g)){bytes.fill(0);if(this.generation===g)this.cancel();return;}
+      this.bytes=bytes;
       await this.transcribe(g);
     }catch(e){if(this.live(g)){this.state='error';this.changed();this.onError(e.code||'INVALID_AUDIO');}}
   }
@@ -76,7 +81,8 @@ export class VoiceSession {
       if(requestOptions)requestOptions.headers={};
     }
   }
-  retry(){if(this.state==='error'&&this.bytes&&this.isValid(this.target))return this.transcribe();}
+  canRetry(){return this.state==='error'&&!!this.bytes&&this.isValid(this.target)&&!['REQUEST_UNKNOWN','RESULT_EXPIRED','REQUEST_CONFLICT','PROVIDER_UNCERTAIN'].includes(this.lastError);}
+  retry(){if(this.canRetry())return this.transcribe();}
   cancel(){
     ++this.generation;this.controller?.abort();this.controller=null;clearTimeout(this.deadline);this.cancelWait?.();this.cancelWait=null;
     const recorder=this.recorder;this.recorder=null;
