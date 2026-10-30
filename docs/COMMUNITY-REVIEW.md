@@ -23,4 +23,8 @@ Gateway source and deploy examples are included but never installed or provision
 
 The official recommended rules were run against `src/**/*.mjs` explicitly; the directory scanner documentation currently excludes `.mjs` by default. No critical no-eval, implied-eval, unsafe-HTML, forbidden-element or lookbehind finding occurred. Advisory findings include global timers/Fetch/WebCrypto in Node-testable modules, intentional empty catches for privacy/error cleanup, and sentence-case false positives for product names, acronyms and literal URLs. Settings currently use the imperative Setting API, so declarative settings search is not implemented. Main-window operation is the tested scope.
 
-Approval is determined by the Obsidian team. This document is a review packet, not evidence that the listing has been submitted or accepted.
+## Directory result — 2026-10-30
+
+The [listing](https://community.obsidian.md/plugins/dictation-bridge) is public and its Add to Obsidian link is active. The automated review of version 0.1.1 completed with the displayed result **Passed**. Dependency scanning found no vulnerable dependencies, and the directory reproduced main.js byte-for-byte from source. Recommendations remain for artifact attestations and the optional SHA256SUMS asset, which Obsidian does not download.
+
+This records the directory's automated checks. It does not claim independent manual security certification or additional device/provider testing.

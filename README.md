@@ -2,12 +2,12 @@
 
 Record a short dictation in desktop Obsidian, send it to **your own HTTPS gateway**, and insert the transcript at the captured cursor or selection. Existing note content, title and path are not uploaded. If the note changes while waiting, the transcript stays in a recovery dialog for explicit insertion.
 
-**Community review candidate, 0.1.1. Not yet listed in the Community Plugins directory.** Requires Obsidian 1.14.5 or later, OS-encrypted SecretStorage, microphone access, a self-hosted gateway and a paid OpenAI API account. No hosted service or API key is supplied. Desktop only; mobile is not claimed. Provider charges and data handling are governed by the operator's OpenAI account.
+**Community release 0.1.1.** [View in the Community Plugins directory](https://community.obsidian.md/plugins/dictation-bridge). Requires Obsidian 1.14.5 or later, OS-encrypted SecretStorage, microphone access, a self-hosted gateway and a paid OpenAI API account. No hosted service or API key is supplied. Desktop only; mobile is not claimed. Provider charges and data handling are governed by the operator's OpenAI account.
 
 ## Install and connect
 
 1. Deploy the included [gateway](gateway/README.md) to your own HTTPS host. Create a separate device UUID/token for each Obsidian vault/device.
-2. Download `main.js`, `manifest.json` and `styles.css` from the GitHub release; verify `SHA256SUMS`. Copy them into `<vault>/.obsidian/plugins/dictation-bridge/`, then enable the plugin.
+2. Install Dictation Bridge from the [Community Plugins directory](https://community.obsidian.md/plugins/dictation-bridge). For manual installation, download `main.js`, `manifest.json` and `styles.css` from the GitHub release; verify `SHA256SUMS`. Copy them into `<vault>/.obsidian/plugins/dictation-bridge/`, then enable the plugin.
 3. In settings, enter the complete HTTPS transcription endpoint, instance UUID and device token. This is **not** the OpenAI API key. No default endpoint is configured.
 4. Optionally set expected ISO language codes (empty means auto-detect), a vocabulary of up to 50 terms, and whole-line Markdown formatting commands.
 5. Open a Markdown note in editing mode and click the microphone icon or use **Start / stop dictation**. Assign a shortcut yourself in Obsidian Hotkeys.
